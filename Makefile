@@ -56,4 +56,4 @@ endif
 
 # deploy diamond and facets
 deploy:
-	@forge script script/Deploy.s.sol:Deploy $(NETWORK_ARGS)
+	@forge script script/DeployDiamond.s.sol:Deploy $(NETWORK_ARGS)

@@ -5,17 +5,13 @@ src = "src"
 out = "out"
 libs = ["lib"]
 remappings = [
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
-    "@devops=lib/foundry-devops/src/",
+    '@chainlink/contracts=lib/chainlink-brownie-contracts/contracts/',
+    '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
 ]
 fs_permissions = [
     { access = "read", path = "./broadcast" },
     { access = "read", path = "./reports" },
 ]
-
-# Etherscan V2 API keys are multi-chain. Only need to define mainnet for evm chains.
-[etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
 
 [fmt]
 single_line_statement_blocks = "multi"
@@ -35,11 +31,18 @@ sort_imports = true
 runs = 1000
 
 [invariant]
-runs = 1000
+runs = 2000
 depth = 128
 
 # false is great for open invariant tests the try anything on any function in any order. Better for simple systems
 # true is great when using handlers that result in valid calls during tests. Better for complex systems
 fail_on_revert = true
+
+# profile settings to lower amount of fuzz and invariant runs when creating coverage reports
+# this prevents crashing that happens when using default profile above
+[profile.coverage]
+fuzz.runs = 10
+invariant.runs = 10
+invariant.depth = 10
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all clean remove install update snapshot coverage-report gas-report anvil deploy
+.PHONY: all clean remove install update build test coverage-report snapshot gas-report anvil deploy
 
 DEFAULT_ANVIL_KEY := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
@@ -12,10 +12,17 @@ clean  :; forge clean
 # Remove modules
 remove :; rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gitmodules && git add . && git commit -m "modules"
 
-install :; forge install cyfrin/foundry-devops@0.2.2 && forge install foundry-rs/forge-std@v1.11.0 && forge install openzeppelin/openzeppelin-contracts@v5.5.0
+# Install dependencies
+install :; forge install cyfrin/foundry-devops@0.4.0 && forge install foundry-rs/forge-std@v1.13.0 && forge install openzeppelin/openzeppelin-contracts@v5.5.0
 
 # Update Dependencies
 update:; forge update
+
+# Build contracts
+build:; forge build
+
+# Run test suite
+test :; forge test 
 
 # Create test coverage report and save to .txt file
 coverage-report :; forge coverage --report debug > coverage.txt
@@ -23,7 +30,7 @@ coverage-report :; forge coverage --report debug > coverage.txt
 # Generate Gas Snapshot
 snapshot :; forge snapshot
 
-# Generate table showing gas cost for each function
+# Generate table showing gas cost for each function and save to gas.txt
 gas-report :; forge test --gas-report > gas.txt
 
 anvil :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
@@ -54,6 +61,6 @@ ifeq ($(findstring --network base sepolia,$(ARGS)),--network base sepolia)
 	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-# deploy diamond and facets
+# deploy contracts with script
 deploy:
 	@forge script script/DeployDiamond.s.sol:Deploy $(NETWORK_ARGS)

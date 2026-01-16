@@ -2,7 +2,7 @@
 
 import {Script, console2} from "forge-std/Script.sol";
 
-pragma solidity ^0.8.27;
+pragma solidity 0.8.33;
 
 contract CodeConstants {
     string constant TOKEN_NAME = "";

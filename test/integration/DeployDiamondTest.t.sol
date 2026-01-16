@@ -4,7 +4,7 @@ import {DeployDiamond} from "../../script/DeployDiamond.s.sol";
 import {CodeConstants, HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Test} from "forge-std/Test.sol";
 
-pragma solidity ^0.8.27;
+pragma solidity 0.8.33;
 
 contract DeployTest is Test, CodeConstants {
     HelperConfig helperConfig;

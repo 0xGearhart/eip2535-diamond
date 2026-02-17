@@ -8,6 +8,9 @@ import {IERC173} from "src/interfaces/IERC173.sol";
 import {LibDiamond} from "src/libraries/LibDiamond.sol";
 
 contract Diamond {
+    // Keep callable business/admin logic in facets only.
+    // This contract should remain proxy plumbing (constructor/fallback/receive),
+    // so selector introspection and upgrade history stay facet-centric.
     constructor(address _contractOwner, address _diamondCutFacet) payable {
         LibDiamond.setContractOwner(_contractOwner);
 

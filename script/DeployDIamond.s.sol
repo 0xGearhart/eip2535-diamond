@@ -68,8 +68,9 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function _ownershipSelectors() internal pure returns (bytes4[] memory selectors) {
-        selectors = new bytes4[](2);
+        selectors = new bytes4[](3);
         selectors[0] = IERC173.owner.selector;
         selectors[1] = IERC173.transferOwnership.selector;
+        selectors[2] = OwnershipFacet.renounceOwnership.selector;
     }
 }

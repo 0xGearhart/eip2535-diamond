@@ -44,7 +44,7 @@ contract DeployDiamondTest is Test, CodeConstants {
         loupeFacet = DiamondLoupeFacet(deployed.loupeFacet);
         ownershipFacet = OwnershipFacet(deployed.ownershipFacet);
         erc20Facet = ERC20Facet(deployed.erc20Facet);
-        init = deployed.init;
+        init = deployed.diamondInit;
 
         diamondCut = IDiamondCut(address(diamond));
         loupe = IDiamondLoupe(address(diamond));

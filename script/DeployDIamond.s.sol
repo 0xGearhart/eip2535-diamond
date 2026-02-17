@@ -3,7 +3,7 @@ pragma solidity 0.8.33;
 
 import {CodeConstants, HelperConfig} from "./HelperConfig.s.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {Script} from "forge-std/Script.sol";
+import {Script, console2} from "forge-std/Script.sol";
 import {Diamond} from "src/Diamond.sol";
 import {DiamondCutFacet} from "src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "src/facets/DiamondLoupeFacet.sol";
@@ -23,16 +23,26 @@ contract DeployDiamond is Script, CodeConstants {
         address loupeFacet;
         address ownershipFacet;
         address erc20Facet;
-        address init;
+        address diamondInit;
     }
 
     function run() external returns (DeployedCore memory deployed) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getNetworkConfig();
 
+        console2.log("Deploying diamond");
+        console2.log("Chain ID:", block.chainid);
+        console2.log("Owner/Deployer:", config.account);
+        console2.log("ERC20 init name:", TOKEN_NAME);
+        console2.log("ERC20 init symbol:", TOKEN_SYMBOL);
+        console2.log("ERC20 init decimals:", TOKEN_DECIMALS);
+        console2.log("ERC20 init supply:", INITIAL_SUPPLY);
+
         vm.startBroadcast(config.account);
         deployed = deployCore(config.account);
         vm.stopBroadcast();
+
+        _logDeployment(deployed);
     }
 
     function deployCore(address owner) internal returns (DeployedCore memory deployed) {
@@ -69,7 +79,7 @@ contract DeployDiamond is Script, CodeConstants {
             loupeFacet: address(loupeFacet),
             ownershipFacet: address(ownershipFacet),
             erc20Facet: address(erc20Facet),
-            init: address(diamondInit)
+            diamondInit: address(diamondInit)
         });
     }
 
@@ -107,5 +117,16 @@ contract DeployDiamond is Script, CodeConstants {
 
     function _erc20InitCalldata(address owner) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(DiamondInit.init.selector, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS, owner, INITIAL_SUPPLY);
+    }
+
+    function _logDeployment(DeployedCore memory deployed) internal view {
+        console2.log("Diamond deployed:");
+        console2.log("  chainId", block.chainid);
+        console2.log("  diamond", deployed.diamond);
+        console2.log("  cutFacet", deployed.cutFacet);
+        console2.log("  loupeFacet", deployed.loupeFacet);
+        console2.log("  ownershipFacet", deployed.ownershipFacet);
+        console2.log("  erc20Facet", deployed.erc20Facet);
+        console2.log("  diamondInit", deployed.diamondInit);
     }
 }

@@ -5,9 +5,11 @@ import {Script, console2} from "forge-std/Script.sol";
 pragma solidity 0.8.33;
 
 contract CodeConstants {
-    string constant TOKEN_NAME = "";
-    string constant TOKEN_SYMBOL = "";
-    uint256 constant INITIAL_SUPPLY = 1 ether;
+    // ERC20 initialization variables
+    string constant TOKEN_NAME = "Diamond Token";
+    string constant TOKEN_SYMBOL = "DT";
+    uint256 constant INITIAL_SUPPLY = 100_000_000e18;
+    uint8 constant TOKEN_DECIMALS = 18;
 
     // default local account and key for signing
     address constant ANVIL_DEFAULT_ACCOUNT = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;

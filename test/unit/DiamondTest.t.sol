@@ -45,4 +45,74 @@ contract DiamondTest is Test {
         loupe = IDiamondLoupe(address(diamond));
         ownership = IERC173(address(diamond));
     }
+
+    function testDiamondCutAllowsNonEmptyCalldataWhenInitIsZero() public {
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](0);
+
+        vm.prank(owner);
+        diamondCut.diamondCut(cut, address(0), hex"1234");
+
+        // The call should succeed and leave ownership unchanged.
+        assertEq(ownership.owner(), owner);
+    }
+
+    function testCoreSelectorsResolveToFacetsNotDiamond() public view {
+        _assertSelectorResolvedToFacet(IDiamondCut.diamondCut.selector, address(cutFacet));
+
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facets.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetFunctionSelectors.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetAddresses.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetAddress.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IERC165.supportsInterface.selector, address(loupeFacet));
+
+        _assertSelectorResolvedToFacet(IERC173.owner.selector, address(ownershipFacet));
+        _assertSelectorResolvedToFacet(IERC173.transferOwnership.selector, address(ownershipFacet));
+        _assertSelectorResolvedToFacet(OwnershipFacet.renounceOwnership.selector, address(ownershipFacet));
+    }
+
+    function testLoupeReportsThreeFacetAddresses() public view {
+        address[] memory facetAddresses = loupe.facetAddresses();
+        assertEq(facetAddresses.length, 3);
+    }
+
+    function testSupportsRequiredInterfaces() public view {
+        assertTrue(IERC165(address(diamond)).supportsInterface(type(IERC165).interfaceId));
+        assertTrue(IERC165(address(diamond)).supportsInterface(type(IDiamondCut).interfaceId));
+        assertTrue(IERC165(address(diamond)).supportsInterface(type(IDiamondLoupe).interfaceId));
+        assertTrue(IERC165(address(diamond)).supportsInterface(type(IERC173).interfaceId));
+    }
+
+    function testOwnerStartsAsDeployerAndCanTransferOwnership() public {
+        assertEq(ownership.owner(), owner);
+
+        vm.prank(owner);
+        ownership.transferOwnership(user);
+        assertEq(ownership.owner(), user);
+    }
+
+    function testTransferOwnershipToZeroAddressReverts() public {
+        vm.prank(owner);
+        vm.expectRevert(OwnershipFacet.OwnershipFacet__NewOwnerIsZeroAddress.selector);
+        ownership.transferOwnership(address(0));
+    }
+
+    function testOwnerCanRenounceOwnership() public {
+        vm.prank(owner);
+        OwnershipFacet(address(diamond)).renounceOwnership();
+
+        assertEq(ownership.owner(), address(0));
+    }
+
+    function testUnauthorizedDiamondCutReverts() public {
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](0);
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(LibDiamond.LibDiamond__NotContractOwner.selector, user, owner));
+        diamondCut.diamondCut(cut, address(0), "");
+    }
+
+    function _assertSelectorResolvedToFacet(bytes4 selector, address expectedFacet) internal view {
+        address resolvedFacet = loupe.facetAddress(selector);
+        assertEq(resolvedFacet, expectedFacet, "selector resolved to unexpected facet");
+        assertTrue(resolvedFacet != address(diamond), "selector resolved to diamond");
+    }
 }

@@ -63,6 +63,12 @@ contract ERC20FacetTest is Test, CodeConstants {
         token.transfer(bob, amount);
     }
 
+    function testTransferRevertsToZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(ERC20Facet.ERC20Facet__TransferToZeroAddress.selector);
+        token.transfer(address(0), 1);
+    }
+
     function testApproveAndTransferFromSpendsAllowance() public {
         uint256 approveAmount = 50e18;
         uint256 spendAmount = 20e18;
@@ -91,6 +97,24 @@ contract ERC20FacetTest is Test, CodeConstants {
         assertEq(token.balanceOf(bob), spendAmount);
     }
 
+    function testTransferFromRevertsFromZeroAddressWithZeroAmount() public {
+        vm.prank(spender);
+        vm.expectRevert(ERC20Facet.ERC20Facet__TransferFromZeroAddress.selector);
+        token.transferFrom(address(0), bob, 0);
+    }
+
+    function testApproveRevertsToZeroSpender() public {
+        vm.prank(owner);
+        vm.expectRevert(ERC20Facet.ERC20Facet__ApproveToZeroAddress.selector);
+        token.approve(address(0), 1);
+    }
+
+    function testApproveRevertsFromZeroOwnerWithPrank() public {
+        vm.prank(address(0));
+        vm.expectRevert(ERC20Facet.ERC20Facet__ApproveFromZeroAddress.selector);
+        token.approve(spender, 1);
+    }
+
     function testMintOnlyOwner() public {
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(LibDiamond.LibDiamond__NotContractOwner.selector, alice, owner));
@@ -110,6 +134,12 @@ contract ERC20FacetTest is Test, CodeConstants {
         assertEq(token.balanceOf(alice), balanceBefore + mintAmount);
     }
 
+    function testMintRevertsToZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(ERC20Facet.ERC20Facet__MintToZeroAddress.selector);
+        erc20Facet.mint(address(0), 1);
+    }
+
     function testBurnReducesSupplyAndHolderBalance() public {
         uint256 amount = 15e18;
 
@@ -123,6 +153,14 @@ contract ERC20FacetTest is Test, CodeConstants {
 
         assertEq(token.balanceOf(alice), 0);
         assertEq(token.totalSupply(), supplyBefore - amount);
+    }
+
+    function testBurnRevertsWhenBalanceTooLow() public {
+        uint256 amount = 1;
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(ERC20Facet.ERC20Facet__InsufficientBalance.selector, 0, amount));
+        erc20Facet.burn(amount);
     }
 
     function testBurnFromSpendsAllowanceAndBurns() public {
@@ -142,6 +180,12 @@ contract ERC20FacetTest is Test, CodeConstants {
         assertEq(token.balanceOf(alice), 0);
         assertEq(token.allowance(alice, spender), 0);
         assertEq(token.totalSupply(), supplyBefore - amount);
+    }
+
+    function testBurnFromRevertsFromZeroAddressWithZeroAmount() public {
+        vm.prank(spender);
+        vm.expectRevert(ERC20Facet.ERC20Facet__BurnFromZeroAddress.selector);
+        erc20Facet.burnFrom(address(0), 0);
     }
 
     function testFuzzTransferConservesSupply(address to, uint96 rawAmount) public {

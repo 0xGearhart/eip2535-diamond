@@ -52,6 +52,19 @@ contract DeployDiamondTest is Test {
         assertEq(loupe.facetAddress(IERC173.owner.selector), address(ownershipFacet));
     }
 
+    function testCoreSelectorsResolveToFacetsNotDiamond() public view {
+        _assertSelectorResolvedToFacet(IDiamondCut.diamondCut.selector, address(cutFacet));
+
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facets.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetFunctionSelectors.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetAddresses.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IDiamondLoupe.facetAddress.selector, address(loupeFacet));
+        _assertSelectorResolvedToFacet(IERC165.supportsInterface.selector, address(loupeFacet));
+
+        _assertSelectorResolvedToFacet(IERC173.owner.selector, address(ownershipFacet));
+        _assertSelectorResolvedToFacet(IERC173.transferOwnership.selector, address(ownershipFacet));
+    }
+
     function testDeploymentReturnsNonZeroCodeBearingAddresses() public view {
         _assertDeployedAddress(address(diamond));
         _assertDeployedAddress(address(cutFacet));
@@ -97,6 +110,12 @@ contract DeployDiamondTest is Test {
     function _assertDeployedAddress(address deployedAddress) internal view {
         assertTrue(deployedAddress != address(0), "deployed address is zero");
         assertGt(deployedAddress.code.length, 0, "deployed address has no code");
+    }
+
+    function _assertSelectorResolvedToFacet(bytes4 selector, address expectedFacet) internal view {
+        address resolvedFacet = loupe.facetAddress(selector);
+        assertEq(resolvedFacet, expectedFacet, "selector resolved to unexpected facet");
+        assertTrue(resolvedFacet != address(diamond), "selector resolved to diamond");
     }
 
     function _containsAddress(address[] memory values, address expected) internal pure returns (bool) {

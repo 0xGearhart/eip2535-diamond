@@ -51,9 +51,5 @@ contract DiamondTest is Test {
         diamondCut = IDiamondCut(address(diamond));
         loupe = IDiamondLoupe(address(diamond));
         ownership = IERC173(address(diamond));
-
-        addFacet = new MockFacetAdd();
-        replaceFacetV1 = new MockFacetReplaceV1();
-        replaceFacetV2 = new MockFacetReplaceV2();
     }
 }

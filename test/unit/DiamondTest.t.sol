@@ -13,8 +13,8 @@ import {IDiamondCut} from "src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "src/interfaces/IDiamondLoupe.sol";
 import {IERC173} from "src/interfaces/IERC173.sol";
 import {LibDiamond} from "src/libraries/LibDiamond.sol";
-import {MockFacetAdd, MockFacetReplaceV1, MockFacetReplaceV2} from "test/mocks/MockUpgradeFacets.sol";
 import {MockInitReverter, MockInitSuccess} from "test/mocks/MockInitializers.sol";
+import {MockFacetAdd, MockFacetReplaceV1, MockFacetReplaceV2} from "test/mocks/MockUpgradeFacets.sol";
 
 interface IAddedFunction {
     function addedFunction() external view returns (uint256);
@@ -179,7 +179,8 @@ contract DiamondTest is Test {
         addSelectors[1] = MockFacetReplaceV1.setSharedValue.selector;
         addSelectors[2] = MockFacetReplaceV1.getSharedValue.selector;
 
-        IDiamondCut.FacetCut[] memory addCut = _singleCut(address(replaceFacetV1), IDiamondCut.FacetCutAction.Add, addSelectors);
+        IDiamondCut.FacetCut[] memory addCut =
+            _singleCut(address(replaceFacetV1), IDiamondCut.FacetCutAction.Add, addSelectors);
         vm.prank(owner);
         diamondCut.diamondCut(addCut, address(0), "");
 
@@ -225,19 +226,23 @@ contract DiamondTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(LibDiamond.LibDiamond__CannotAddFunctionToDiamondThatAlreadyExists.selector, IERC173.owner.selector)
+            abi.encodeWithSelector(
+                LibDiamond.LibDiamond__CannotAddFunctionToDiamondThatAlreadyExists.selector, IERC173.owner.selector
+            )
         );
         diamondCut.diamondCut(cut, address(0), "");
     }
 
     function testDiamondCutReplaceMissingSelectorReverts() public {
         bytes4[] memory selectors = _singleSelectorArray(MockFacetAdd.addedFunction.selector);
-        IDiamondCut.FacetCut[] memory cut = _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
+        IDiamondCut.FacetCut[] memory cut =
+            _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
 
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                LibDiamond.LibDiamond__CannotReplaceFunctionThatDoesNotExist.selector, MockFacetAdd.addedFunction.selector
+                LibDiamond.LibDiamond__CannotReplaceFunctionThatDoesNotExist.selector,
+                MockFacetAdd.addedFunction.selector
             )
         );
         diamondCut.diamondCut(cut, address(0), "");
@@ -245,7 +250,8 @@ contract DiamondTest is Test {
 
     function testDiamondCutReplaceWithSameFacetReverts() public {
         bytes4[] memory selectors = _singleSelectorArray(MockFacetReplaceV1.replacedFunction.selector);
-        IDiamondCut.FacetCut[] memory addCut = _singleCut(address(replaceFacetV1), IDiamondCut.FacetCutAction.Add, selectors);
+        IDiamondCut.FacetCut[] memory addCut =
+            _singleCut(address(replaceFacetV1), IDiamondCut.FacetCutAction.Add, selectors);
 
         vm.prank(owner);
         diamondCut.diamondCut(addCut, address(0), "");
@@ -269,7 +275,9 @@ contract DiamondTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(LibDiamond.LibDiamond__RemoveFacetAddressMustBeZeroAddress.selector, address(addFacet))
+            abi.encodeWithSelector(
+                LibDiamond.LibDiamond__RemoveFacetAddressMustBeZeroAddress.selector, address(addFacet)
+            )
         );
         diamondCut.diamondCut(cut, address(0), "");
     }
@@ -281,7 +289,8 @@ contract DiamondTest is Test {
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                LibDiamond.LibDiamond__CannotRemoveFunctionThatDoesNotExist.selector, MockFacetAdd.addedFunction.selector
+                LibDiamond.LibDiamond__CannotRemoveFunctionThatDoesNotExist.selector,
+                MockFacetAdd.addedFunction.selector
             )
         );
         diamondCut.diamondCut(cut, address(0), "");
@@ -332,7 +341,8 @@ contract DiamondTest is Test {
 
     function testDiamondCutReplaceWithNoSelectorsReverts() public {
         bytes4[] memory selectors = new bytes4[](0);
-        IDiamondCut.FacetCut[] memory cut = _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
+        IDiamondCut.FacetCut[] memory cut =
+            _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
 
         vm.prank(owner);
         vm.expectRevert(
@@ -360,7 +370,8 @@ contract DiamondTest is Test {
         vm.store(address(diamond), _selectorToFacetSlot(selector), bytes32(uint256(uint160(address(diamond)))));
 
         bytes4[] memory selectors = _singleSelectorArray(selector);
-        IDiamondCut.FacetCut[] memory cut = _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
+        IDiamondCut.FacetCut[] memory cut =
+            _singleCut(address(replaceFacetV2), IDiamondCut.FacetCutAction.Replace, selectors);
 
         vm.prank(owner);
         vm.expectRevert(
@@ -386,9 +397,7 @@ contract DiamondTest is Test {
         IDiamondCut.FacetCut[] memory cut = _singleCut(address(0), IDiamondCut.FacetCutAction.Remove, selectors);
 
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(LibDiamond.LibDiamond__CannotRemoveImmutableFunction.selector, selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(LibDiamond.LibDiamond__CannotRemoveImmutableFunction.selector, selector));
         diamondCut.diamondCut(cut, address(0), "");
     }
 
@@ -438,7 +447,9 @@ contract DiamondTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(LibDiamond.LibDiamond__InitializationFunctionReverted.selector, address(init), innerError)
+            abi.encodeWithSelector(
+                LibDiamond.LibDiamond__InitializationFunctionReverted.selector, address(init), innerError
+            )
         );
         diamondCut.diamondCut(cut, address(init), callData);
     }
@@ -454,14 +465,17 @@ contract DiamondTest is Test {
         selectors[0] = selector;
     }
 
-    function _singleCut(address facetAddress, IDiamondCut.FacetCutAction action, bytes4[] memory selectors)
+    function _singleCut(
+        address facetAddress,
+        IDiamondCut.FacetCutAction action,
+        bytes4[] memory selectors
+    )
         internal
         pure
         returns (IDiamondCut.FacetCut[] memory cut)
     {
         cut = new IDiamondCut.FacetCut[](1);
-        cut[0] =
-            IDiamondCut.FacetCut({facetAddress: facetAddress, action: action, functionSelectors: selectors});
+        cut[0] = IDiamondCut.FacetCut({facetAddress: facetAddress, action: action, functionSelectors: selectors});
     }
 
     function _assertContainsSelector(bytes4[] memory selectors, bytes4 selector) internal {

@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Test} from "forge-std/Test.sol";
 import {DeployDiamond} from "script/DeployDiamond.s.sol";
-import {HelperConfig} from "script/HelperConfig.s.sol";
+import {CodeConstants, HelperConfig} from "script/HelperConfig.s.sol";
 import {Diamond} from "src/Diamond.sol";
 import {DiamondCutFacet} from "src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "src/facets/DiamondLoupeFacet.sol";

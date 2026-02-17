@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {LibDiamond} from "src/libraries/LibDiamond.sol";
 import {LibERC20Storage} from "src/libraries/LibERC20Storage.sol";
 
-contract ERC20Facet is IERC20, IERC20Metadata {
+contract ERC20Facet is IERC20Metadata {
     error ERC20Facet__TransferFromZeroAddress();
     error ERC20Facet__TransferToZeroAddress();
     error ERC20Facet__ApproveFromZeroAddress();

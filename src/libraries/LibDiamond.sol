@@ -19,7 +19,6 @@ library LibDiamond {
     error LibDiamond__CannotRemoveFunctionThatDoesNotExist(bytes4 selector);
     error LibDiamond__CannotRemoveImmutableFunction(bytes4 selector);
     error LibDiamond__IncorrectFacetCutAction(uint8 action);
-    error LibDiamond__InitIsZeroAddressButCalldataIsNotEmpty();
     error LibDiamond__CalldataIsEmptyButInitIsNotZeroAddress();
     error LibDiamond__InitializationFunctionReverted(address initAddress, bytes reason);
 
@@ -215,9 +214,7 @@ library LibDiamond {
 
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         if (_init == address(0)) {
-            if (_calldata.length != 0) {
-                revert LibDiamond__InitIsZeroAddressButCalldataIsNotEmpty();
-            }
+            return;
         } else {
             if (_calldata.length == 0) {
                 revert LibDiamond__CalldataIsEmptyButInitIsNotZeroAddress();

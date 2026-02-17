@@ -8,13 +8,13 @@ import {LibDiamond} from "src/libraries/LibDiamond.sol";
 contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
     function facets() external view override returns (Facet[] memory facets_) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        uint256 numFacets = ds.facetAddresses.length;
+        uint256 numFacets = ds.s_facetAddresses.length;
         facets_ = new Facet[](numFacets);
 
         for (uint256 i; i < numFacets; i++) {
-            address facetAddress_ = ds.facetAddresses[i];
+            address facetAddress_ = ds.s_facetAddresses[i];
             facets_[i].facetAddress = facetAddress_;
-            facets_[i].functionSelectors = ds.facetFunctionSelectors[facetAddress_].functionSelectors;
+            facets_[i].functionSelectors = ds.s_facetFunctionSelectors[facetAddress_].functionSelectors;
         }
     }
 
@@ -25,21 +25,21 @@ contract DiamondLoupeFacet is IDiamondLoupe, IERC165 {
         returns (bytes4[] memory facetFunctionSelectors_)
     {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetFunctionSelectors_ = ds.facetFunctionSelectors[_facet].functionSelectors;
+        facetFunctionSelectors_ = ds.s_facetFunctionSelectors[_facet].functionSelectors;
     }
 
     function facetAddresses() external view override returns (address[] memory facetAddresses_) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetAddresses_ = ds.facetAddresses;
+        facetAddresses_ = ds.s_facetAddresses;
     }
 
     function facetAddress(bytes4 _functionSelector) external view override returns (address facetAddress_) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        facetAddress_ = ds.selectorToFacetAndPosition[_functionSelector].facetAddress;
+        facetAddress_ = ds.s_selectorToFacetAndPosition[_functionSelector].facetAddress;
     }
 
     function supportsInterface(bytes4 _interfaceId) external view override returns (bool) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        return ds.supportedInterfaces[_interfaceId];
+        return ds.s_supportedInterfaces[_interfaceId];
     }
 }

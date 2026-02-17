@@ -17,23 +17,23 @@ contract ERC20Facet is IERC20, IERC20Metadata {
     error ERC20Facet__InsufficientAllowance(uint256 allowance, uint256 needed);
 
     function name() external view returns (string memory) {
-        return LibERC20Storage.erc20Storage().name;
+        return LibERC20Storage.erc20Storage().s_name;
     }
 
     function symbol() external view returns (string memory) {
-        return LibERC20Storage.erc20Storage().symbol;
+        return LibERC20Storage.erc20Storage().s_symbol;
     }
 
     function decimals() external view returns (uint8) {
-        return LibERC20Storage.erc20Storage().decimals;
+        return LibERC20Storage.erc20Storage().s_decimals;
     }
 
     function totalSupply() external view returns (uint256) {
-        return LibERC20Storage.erc20Storage().totalSupply;
+        return LibERC20Storage.erc20Storage().s_totalSupply;
     }
 
     function balanceOf(address account) external view returns (uint256) {
-        return LibERC20Storage.erc20Storage().balances[account];
+        return LibERC20Storage.erc20Storage().s_balances[account];
     }
 
     function transfer(address to, uint256 amount) external returns (bool) {
@@ -42,7 +42,7 @@ contract ERC20Facet is IERC20, IERC20Metadata {
     }
 
     function allowance(address owner, address spender) external view returns (uint256) {
-        return LibERC20Storage.erc20Storage().allowances[owner][spender];
+        return LibERC20Storage.erc20Storage().s_allowances[owner][spender];
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -82,15 +82,15 @@ contract ERC20Facet is IERC20, IERC20Metadata {
         }
 
         LibERC20Storage.ERC20Storage storage es = LibERC20Storage.erc20Storage();
-        uint256 fromBalance = es.balances[from];
+        uint256 fromBalance = es.s_balances[from];
         if (fromBalance < amount) {
             revert ERC20Facet__InsufficientBalance(fromBalance, amount);
         }
 
         unchecked {
-            es.balances[from] = fromBalance - amount;
+            es.s_balances[from] = fromBalance - amount;
         }
-        es.balances[to] += amount;
+        es.s_balances[to] += amount;
         emit Transfer(from, to, amount);
     }
 
@@ -102,21 +102,21 @@ contract ERC20Facet is IERC20, IERC20Metadata {
             revert ERC20Facet__ApproveToZeroAddress();
         }
 
-        LibERC20Storage.erc20Storage().allowances[owner][spender] = amount;
+        LibERC20Storage.erc20Storage().s_allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
     function _spendAllowance(address owner, address spender, uint256 amount) internal {
         LibERC20Storage.ERC20Storage storage es = LibERC20Storage.erc20Storage();
-        uint256 currentAllowance = es.allowances[owner][spender];
+        uint256 currentAllowance = es.s_allowances[owner][spender];
         if (currentAllowance < type(uint256).max) {
             if (currentAllowance < amount) {
                 revert ERC20Facet__InsufficientAllowance(currentAllowance, amount);
             }
             unchecked {
-                es.allowances[owner][spender] = currentAllowance - amount;
+                es.s_allowances[owner][spender] = currentAllowance - amount;
             }
-            emit Approval(owner, spender, es.allowances[owner][spender]);
+            emit Approval(owner, spender, es.s_allowances[owner][spender]);
         }
     }
 
@@ -126,8 +126,8 @@ contract ERC20Facet is IERC20, IERC20Metadata {
         }
 
         LibERC20Storage.ERC20Storage storage es = LibERC20Storage.erc20Storage();
-        es.totalSupply += amount;
-        es.balances[to] += amount;
+        es.s_totalSupply += amount;
+        es.s_balances[to] += amount;
         emit Transfer(address(0), to, amount);
     }
 
@@ -137,15 +137,15 @@ contract ERC20Facet is IERC20, IERC20Metadata {
         }
 
         LibERC20Storage.ERC20Storage storage es = LibERC20Storage.erc20Storage();
-        uint256 fromBalance = es.balances[from];
+        uint256 fromBalance = es.s_balances[from];
         if (fromBalance < amount) {
             revert ERC20Facet__InsufficientBalance(fromBalance, amount);
         }
 
         unchecked {
-            es.balances[from] = fromBalance - amount;
+            es.s_balances[from] = fromBalance - amount;
         }
-        es.totalSupply -= amount;
+        es.s_totalSupply -= amount;
         emit Transfer(from, address(0), amount);
     }
 }

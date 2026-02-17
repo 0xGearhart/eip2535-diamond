@@ -33,11 +33,11 @@ library LibDiamond {
     }
 
     struct DiamondStorage {
-        mapping(bytes4 selector => FacetAddressAndPosition facetAddressAndSelectorPosition) selectorToFacetAndPosition;
-        mapping(address facetAddress => FacetFunctionSelectors facetFunctionSelectors) facetFunctionSelectors;
-        address[] facetAddresses;
-        mapping(bytes4 interfaceId => bool) supportedInterfaces;
-        address contractOwner;
+        mapping(bytes4 selector => FacetAddressAndPosition facetAddressAndSelectorPosition) s_selectorToFacetAndPosition;
+        mapping(address facetAddress => FacetFunctionSelectors facetFunctionSelectors) s_facetFunctionSelectors;
+        address[] s_facetAddresses;
+        mapping(bytes4 interfaceId => bool) s_supportedInterfaces;
+        address s_contractOwner;
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -49,13 +49,13 @@ library LibDiamond {
 
     function setContractOwner(address _newOwner) internal {
         DiamondStorage storage ds = diamondStorage();
-        address previousOwner = ds.contractOwner;
-        ds.contractOwner = _newOwner;
+        address previousOwner = ds.s_contractOwner;
+        ds.s_contractOwner = _newOwner;
         emit OwnershipTransferred(previousOwner, _newOwner);
     }
 
     function contractOwner() internal view returns (address owner_) {
-        owner_ = diamondStorage().contractOwner;
+        owner_ = diamondStorage().s_contractOwner;
     }
 
     function enforceIsContractOwner() internal view {
@@ -92,7 +92,7 @@ library LibDiamond {
         }
 
         DiamondStorage storage ds = diamondStorage();
-        uint96 selectorPosition = uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
+        uint96 selectorPosition = uint96(ds.s_facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
         if (selectorPosition == 0) {
             addFacet(ds, _facetAddress);
@@ -100,7 +100,7 @@ library LibDiamond {
 
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
-            address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
+            address oldFacetAddress = ds.s_selectorToFacetAndPosition[selector].facetAddress;
             if (oldFacetAddress != address(0)) {
                 revert LibDiamond__CannotAddFunctionToDiamondThatAlreadyExists(selector);
             }
@@ -118,7 +118,7 @@ library LibDiamond {
         }
 
         DiamondStorage storage ds = diamondStorage();
-        uint96 selectorPosition = uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
+        uint96 selectorPosition = uint96(ds.s_facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
         if (selectorPosition == 0) {
             addFacet(ds, _facetAddress);
@@ -126,7 +126,7 @@ library LibDiamond {
 
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
-            address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
+            address oldFacetAddress = ds.s_selectorToFacetAndPosition[selector].facetAddress;
 
             if (oldFacetAddress == _facetAddress) {
                 revert LibDiamond__CannotReplaceFunctionWithTheSameFunctionFromTheSameFacet(selector);
@@ -155,15 +155,15 @@ library LibDiamond {
         DiamondStorage storage ds = diamondStorage();
         for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
             bytes4 selector = _functionSelectors[selectorIndex];
-            address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
+            address oldFacetAddress = ds.s_selectorToFacetAndPosition[selector].facetAddress;
             removeFunction(ds, oldFacetAddress, selector);
         }
     }
 
     function addFacet(DiamondStorage storage ds, address _facetAddress) internal {
         enforceHasContractCode(_facetAddress, "LibDiamond: New facet has no code");
-        ds.facetFunctionSelectors[_facetAddress].facetAddressPosition = ds.facetAddresses.length;
-        ds.facetAddresses.push(_facetAddress);
+        ds.s_facetFunctionSelectors[_facetAddress].facetAddressPosition = ds.s_facetAddresses.length;
+        ds.s_facetAddresses.push(_facetAddress);
     }
 
     function addFunction(
@@ -172,9 +172,9 @@ library LibDiamond {
         uint96 _selectorPosition,
         address _facetAddress
     ) internal {
-        ds.selectorToFacetAndPosition[_selector].functionSelectorPosition = _selectorPosition;
-        ds.facetFunctionSelectors[_facetAddress].functionSelectors.push(_selector);
-        ds.selectorToFacetAndPosition[_selector].facetAddress = _facetAddress;
+        ds.s_selectorToFacetAndPosition[_selector].functionSelectorPosition = _selectorPosition;
+        ds.s_facetFunctionSelectors[_facetAddress].functionSelectors.push(_selector);
+        ds.s_selectorToFacetAndPosition[_selector].facetAddress = _facetAddress;
     }
 
     function removeFunction(DiamondStorage storage ds, address _facetAddress, bytes4 _selector) internal {
@@ -185,30 +185,30 @@ library LibDiamond {
             revert LibDiamond__CannotRemoveImmutableFunction(_selector);
         }
 
-        uint256 selectorPosition = ds.selectorToFacetAndPosition[_selector].functionSelectorPosition;
-        uint256 lastSelectorPosition = ds.facetFunctionSelectors[_facetAddress].functionSelectors.length - 1;
+        uint256 selectorPosition = ds.s_selectorToFacetAndPosition[_selector].functionSelectorPosition;
+        uint256 lastSelectorPosition = ds.s_facetFunctionSelectors[_facetAddress].functionSelectors.length - 1;
 
         if (selectorPosition != lastSelectorPosition) {
-            bytes4 lastSelector = ds.facetFunctionSelectors[_facetAddress].functionSelectors[lastSelectorPosition];
-            ds.facetFunctionSelectors[_facetAddress].functionSelectors[selectorPosition] = lastSelector;
-            ds.selectorToFacetAndPosition[lastSelector].functionSelectorPosition = uint96(selectorPosition);
+            bytes4 lastSelector = ds.s_facetFunctionSelectors[_facetAddress].functionSelectors[lastSelectorPosition];
+            ds.s_facetFunctionSelectors[_facetAddress].functionSelectors[selectorPosition] = lastSelector;
+            ds.s_selectorToFacetAndPosition[lastSelector].functionSelectorPosition = uint96(selectorPosition);
         }
 
-        ds.facetFunctionSelectors[_facetAddress].functionSelectors.pop();
-        delete ds.selectorToFacetAndPosition[_selector];
+        ds.s_facetFunctionSelectors[_facetAddress].functionSelectors.pop();
+        delete ds.s_selectorToFacetAndPosition[_selector];
 
         if (lastSelectorPosition == 0) {
-            uint256 lastFacetAddressPosition = ds.facetAddresses.length - 1;
-            uint256 facetAddressPosition = ds.facetFunctionSelectors[_facetAddress].facetAddressPosition;
+            uint256 lastFacetAddressPosition = ds.s_facetAddresses.length - 1;
+            uint256 facetAddressPosition = ds.s_facetFunctionSelectors[_facetAddress].facetAddressPosition;
 
             if (facetAddressPosition != lastFacetAddressPosition) {
-                address lastFacetAddress = ds.facetAddresses[lastFacetAddressPosition];
-                ds.facetAddresses[facetAddressPosition] = lastFacetAddress;
-                ds.facetFunctionSelectors[lastFacetAddress].facetAddressPosition = facetAddressPosition;
+                address lastFacetAddress = ds.s_facetAddresses[lastFacetAddressPosition];
+                ds.s_facetAddresses[facetAddressPosition] = lastFacetAddress;
+                ds.s_facetFunctionSelectors[lastFacetAddress].facetAddressPosition = facetAddressPosition;
             }
 
-            ds.facetAddresses.pop();
-            delete ds.facetFunctionSelectors[_facetAddress].facetAddressPosition;
+            ds.s_facetAddresses.pop();
+            delete ds.s_facetFunctionSelectors[_facetAddress].facetAddressPosition;
         }
     }
 

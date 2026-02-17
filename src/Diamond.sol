@@ -25,15 +25,15 @@ contract Diamond {
         LibDiamond.diamondCut(cut, address(0), "");
 
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        ds.supportedInterfaces[type(IERC165).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondCut).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
-        ds.supportedInterfaces[type(IERC173).interfaceId] = true;
+        ds.s_supportedInterfaces[type(IERC165).interfaceId] = true;
+        ds.s_supportedInterfaces[type(IDiamondCut).interfaceId] = true;
+        ds.s_supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
+        ds.s_supportedInterfaces[type(IERC173).interfaceId] = true;
     }
 
     fallback() external payable {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        address facet = ds.selectorToFacetAndPosition[msg.sig].facetAddress;
+        address facet = ds.s_selectorToFacetAndPosition[msg.sig].facetAddress;
         if (facet == address(0)) {
             revert("Diamond: Function does not exist");
         }

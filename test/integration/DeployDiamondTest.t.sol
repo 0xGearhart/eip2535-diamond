@@ -63,6 +63,7 @@ contract DeployDiamondTest is Test {
 
         _assertSelectorResolvedToFacet(IERC173.owner.selector, address(ownershipFacet));
         _assertSelectorResolvedToFacet(IERC173.transferOwnership.selector, address(ownershipFacet));
+        _assertSelectorResolvedToFacet(OwnershipFacet.renounceOwnership.selector, address(ownershipFacet));
     }
 
     function testDeploymentReturnsNonZeroCodeBearingAddresses() public view {
@@ -98,6 +99,19 @@ contract DeployDiamondTest is Test {
         vm.prank(owner);
         ownership.transferOwnership(user);
         assertEq(ownership.owner(), user);
+    }
+
+    function testTransferOwnershipToZeroAddressReverts() public {
+        vm.prank(owner);
+        vm.expectRevert(OwnershipFacet.OwnershipFacet__NewOwnerIsZeroAddress.selector);
+        ownership.transferOwnership(address(0));
+    }
+
+    function testOwnerCanRenounceOwnership() public {
+        vm.prank(owner);
+        OwnershipFacet(address(diamond)).renounceOwnership();
+
+        assertEq(ownership.owner(), address(0));
     }
 
     function testUnauthorizedDiamondCutReverts() public {

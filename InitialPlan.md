@@ -54,19 +54,19 @@ execute initial diamondCut + init calldata
 log addresses
 Update Makefile target if needed
 Commit message: chore: implement full diamond deployment script and fix naming
-1) test/erc20-integration-and-fuzz
+6) test/erc20-integration-and-fuzz
 Add deterministic ERC-20 integration tests through diamond proxy
 Add fuzz tests:
 transfer conservation
 allowance/spend behavior
 Commit message: test: add ERC20 integration and fuzz coverage through diamond proxy
-1) test/invariants-diamond-erc20
+7) test/invariants-diamond-erc20
 Add invariants:
 sum balances = total supply
 selector mapping consistency
 loupe internal consistency
 Commit message: test: add invariant suite for diamond selector table and ERC20 accounting
-1) docs/readme-diamond-architecture
+8) docs/readme-diamond-architecture
 Update README.md with architecture, facet list, deployment and testing commands
 Commit message: docs: document diamond architecture, deployment, and test strategy
 

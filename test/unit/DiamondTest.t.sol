@@ -2,17 +2,21 @@
 pragma solidity 0.8.33;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Test} from "forge-std/Test.sol";
 import {DeployDiamond} from "script/DeployDiamond.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Diamond} from "src/Diamond.sol";
 import {DiamondCutFacet} from "src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "src/facets/DiamondLoupeFacet.sol";
+import {ERC20Facet} from "src/facets/ERC20Facet.sol";
 import {OwnershipFacet} from "src/facets/OwnershipFacet.sol";
 import {IDiamondCut} from "src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "src/interfaces/IDiamondLoupe.sol";
 import {IERC173} from "src/interfaces/IERC173.sol";
 import {LibDiamond} from "src/libraries/LibDiamond.sol";
+import {DiamondInit} from "src/upgradeInitializers/DiamondInit.sol";
 import {MockInitReverter, MockInitSuccess} from "test/mocks/MockInitializers.sol";
 import {MockFacetAdd, MockFacetReplaceV1, MockFacetReplaceV2} from "test/mocks/MockUpgradeFacets.sol";
 
@@ -34,6 +38,7 @@ contract DiamondTest is Test {
     DiamondCutFacet internal cutFacet;
     DiamondLoupeFacet internal loupeFacet;
     OwnershipFacet internal ownershipFacet;
+    ERC20Facet internal erc20Facet;
 
     IDiamondCut internal diamondCut;
     IDiamondLoupe internal loupe;
@@ -59,6 +64,7 @@ contract DiamondTest is Test {
         cutFacet = DiamondCutFacet(deployed.cutFacet);
         loupeFacet = DiamondLoupeFacet(deployed.loupeFacet);
         ownershipFacet = OwnershipFacet(deployed.ownershipFacet);
+        erc20Facet = ERC20Facet(deployed.erc20Facet);
 
         diamondCut = IDiamondCut(address(diamond));
         loupe = IDiamondLoupe(address(diamond));
@@ -91,16 +97,18 @@ contract DiamondTest is Test {
         _assertSelectorResolvedToFacet(IERC173.owner.selector, address(ownershipFacet));
         _assertSelectorResolvedToFacet(IERC173.transferOwnership.selector, address(ownershipFacet));
         _assertSelectorResolvedToFacet(OwnershipFacet.renounceOwnership.selector, address(ownershipFacet));
+        _assertSelectorResolvedToFacet(IERC20.transfer.selector, address(erc20Facet));
+        _assertSelectorResolvedToFacet(ERC20Facet.mint.selector, address(erc20Facet));
     }
 
-    function testLoupeReportsThreeFacetAddresses() public view {
+    function testLoupeReportsFourFacetAddresses() public view {
         address[] memory facetAddresses = loupe.facetAddresses();
-        assertEq(facetAddresses.length, 3);
+        assertEq(facetAddresses.length, 4);
     }
 
     function testLoupeFacetsIncludesExpectedSelectorsPerFacet() public {
         IDiamondLoupe.Facet[] memory allFacets = loupe.facets();
-        assertEq(allFacets.length, 3);
+        assertEq(allFacets.length, 4);
 
         bytes4[] memory cutSelectors = loupe.facetFunctionSelectors(address(cutFacet));
         assertEq(cutSelectors.length, 1);
@@ -119,6 +127,21 @@ contract DiamondTest is Test {
         _assertContainsSelector(ownershipSelectors, IERC173.owner.selector);
         _assertContainsSelector(ownershipSelectors, IERC173.transferOwnership.selector);
         _assertContainsSelector(ownershipSelectors, OwnershipFacet.renounceOwnership.selector);
+
+        bytes4[] memory erc20Selectors = loupe.facetFunctionSelectors(address(erc20Facet));
+        assertEq(erc20Selectors.length, 12);
+        _assertContainsSelector(erc20Selectors, IERC20Metadata.name.selector);
+        _assertContainsSelector(erc20Selectors, IERC20Metadata.symbol.selector);
+        _assertContainsSelector(erc20Selectors, IERC20Metadata.decimals.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.totalSupply.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.balanceOf.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.transfer.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.allowance.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.approve.selector);
+        _assertContainsSelector(erc20Selectors, IERC20.transferFrom.selector);
+        _assertContainsSelector(erc20Selectors, ERC20Facet.mint.selector);
+        _assertContainsSelector(erc20Selectors, ERC20Facet.burn.selector);
+        _assertContainsSelector(erc20Selectors, ERC20Facet.burnFrom.selector);
     }
 
     function testLoupeUnknownFacetAndSelectorReturnEmptyValues() public {
@@ -409,11 +432,25 @@ contract DiamondTest is Test {
         diamondCut.diamondCut(cut, address(0), "");
 
         address[] memory facetAddresses = loupe.facetAddresses();
-        assertEq(facetAddresses.length, 2);
+        assertEq(facetAddresses.length, 3);
         assertEq(loupe.facetAddress(IDiamondCut.diamondCut.selector), address(0));
         assertTrue(!_containsAddress(facetAddresses, address(cutFacet)), "cut facet should be removed");
         assertTrue(_containsAddress(facetAddresses, address(loupeFacet)), "loupe facet should remain");
         assertTrue(_containsAddress(facetAddresses, address(ownershipFacet)), "ownership facet should remain");
+        assertTrue(_containsAddress(facetAddresses, address(erc20Facet)), "erc20 facet should remain");
+    }
+
+    function testDiamondInitCannotBeRunTwice() public {
+        IDiamondCut.FacetCut[] memory emptyCut = new IDiamondCut.FacetCut[](0);
+        DiamondInit init = new DiamondInit();
+        bytes memory callData = abi.encodeWithSelector(DiamondInit.init.selector, "Re", "RE", 18, owner, 1e18);
+        bytes memory innerError = abi.encodeWithSelector(DiamondInit.DiamondInit__AlreadyInitialized.selector);
+
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(LibDiamond.LibDiamond__InitializationFunctionReverted.selector, address(init), innerError)
+        );
+        diamondCut.diamondCut(emptyCut, address(init), callData);
     }
 
     function testDiamondCutInitNonZeroWithEmptyCalldataReverts() public {

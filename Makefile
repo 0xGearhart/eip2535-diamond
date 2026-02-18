@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all reset clean remove install update build test coverage-report snapshot gas-report anvil deploy
+.PHONY: all reset clean remove install build test coverage-report snapshot gas-report anvil deploy
 
 DEFAULT_ANVIL_KEY := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
@@ -16,9 +16,6 @@ remove :; rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gi
 
 # Install dependencies
 install :; forge install cyfrin/foundry-devops@0.4.0 && forge install foundry-rs/forge-std@v1.13.0 && forge install openzeppelin/openzeppelin-contracts@v5.5.0
-
-# Update Dependencies
-update:; forge update
 
 # Build contracts
 build:; forge build

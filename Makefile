@@ -1,10 +1,12 @@
 -include .env
 
-.PHONY: all clean remove install update build test coverage-report snapshot gas-report anvil deploy
+.PHONY: all reset clean remove install update build test coverage-report snapshot gas-report anvil deploy
 
 DEFAULT_ANVIL_KEY := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
-all: clean remove install build
+all: install build
+
+reset: clean remove install build
 
 # Clean the repo
 clean  :; forge clean
@@ -41,30 +43,30 @@ anvil :; anvil -m 'test test test test test test test test test test test junk' 
 
 NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_KEY) --broadcast
 
-ifeq ($(findstring --network eth MAINNET,$(ARGS)),--network eth MAINNET)
+ifeq ($(findstring --network eth-MAINNET,$(ARGS)),--network eth MAINNET)
 	NETWORK_ARGS := --rpc-url $(ETH_MAINNET_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-ifeq ($(findstring --network eth sepolia,$(ARGS)),--network eth sepolia)
+ifeq ($(findstring --network eth-sepolia,$(ARGS)),--network eth sepolia)
 	NETWORK_ARGS := --rpc-url $(ETH_SEPOLIA_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-ifeq ($(findstring --network arb MAINNET,$(ARGS)),--network arb MAINNET)
+ifeq ($(findstring --network arb-MAINNET,$(ARGS)),--network arb MAINNET)
 	NETWORK_ARGS := --rpc-url $(ARB_MAINNET_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-ifeq ($(findstring --network arb sepolia,$(ARGS)),--network arb sepolia)
+ifeq ($(findstring --network arb-sepolia,$(ARGS)),--network arb sepolia)
 	NETWORK_ARGS := --rpc-url $(ARB_SEPOLIA_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-ifeq ($(findstring --network base MAINNET,$(ARGS)),--network base MAINNET)
+ifeq ($(findstring --network base-MAINNET,$(ARGS)),--network base MAINNET)
 	NETWORK_ARGS := --rpc-url $(BASE_MAINNET_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
-ifeq ($(findstring --network base sepolia,$(ARGS)),--network base sepolia)
+ifeq ($(findstring --network base-sepolia,$(ARGS)),--network base sepolia)
 	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_RPC_URL) --account defaultKey --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
 # deploy contracts with script
 deploy:
-	@forge script script/DeployDiamond.s.sol:Deploy $(NETWORK_ARGS)
+	@forge script script/DeployDiamond.s.sol:DeployDiamond $(NETWORK_ARGS)

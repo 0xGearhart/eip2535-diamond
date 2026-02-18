@@ -1,335 +1,281 @@
-# Project Name
+# EIP-2535 Diamond (Foundry)
 
-**⚠️ This project is not audited, use at your own risk**
+**⚠️ This project is not audited. Do not use in production without a professional security review.**
 
 ## Table of Contents
 
-- [Project Name](#project-name)
+- [EIP-2535 Diamond (Foundry)](#eip-2535-diamond-foundry)
   - [Table of Contents](#table-of-contents)
   - [About](#about)
-    - [Key Features](#key-features)
-    - [Architecture](#architecture)
+  - [Implemented Standards](#implemented-standards)
+  - [Architecture](#architecture)
+    - [Core Components](#core-components)
+  - [Repository Structure](#repository-structure)
   - [Getting Started](#getting-started)
     - [Requirements](#requirements)
-    - [Quickstart](#quickstart)
+    - [Install](#install)
     - [Environment Setup](#environment-setup)
   - [Usage](#usage)
     - [Build](#build)
-    - [Testing](#testing)
-    - [Test Coverage](#test-coverage)
-    - [Deploy Locally](#deploy-locally)
-    - [Interact with Contract](#interact-with-contract)
+    - [Run All Tests](#run-all-tests)
+    - [Run Test Slices](#run-test-slices)
+    - [Coverage](#coverage)
+    - [Additional Make Targets](#additional-make-targets)
   - [Deployment](#deployment)
-    - [Deploy to Testnet](#deploy-to-testnet)
-    - [Verify Contract](#verify-contract)
-    - [Deployment Addresses](#deployment-addresses)
-  - [Security](#security)
-    - [Audit Status](#audit-status)
-    - [Access Control (Roles \& Permissions)](#access-control-roles--permissions)
-    - [Known Limitations](#known-limitations)
-  - [Gas Optimization](#gas-optimization)
-  - [Contributing](#contributing)
+    - [Local (Anvil)](#local-anvil)
+    - [Testnet / Mainnet](#testnet--mainnet)
+  - [Testing Strategy](#testing-strategy)
+  - [Security Notes](#security-notes)
+  - [References](#references)
   - [License](#license)
 
 ## About
 
-[1-2 sentence description of what the contract does and its purpose]
+This repository implements an upgradeable **ERC-2535 Diamond** using Foundry, with:
 
-### Key Features
+- Diamond core (cut, loupe, fallback dispatch)
+- Single-owner access control (`IERC173` style)
+- ERC-20 facet (`name`, `symbol`, `decimals`, transfers, approvals)
+- Owner `mint`, holder `burn`, and `burnFrom`
+- One-time initializer for ERC-20 metadata and initial supply
 
-- Feature 1
-- Feature 2
-- Feature 3
+The codebase follows a facet-first design where callable logic lives in facets and the `Diamond` contract stays as proxy plumbing.
 
-**Tech Stack:**
-- Solidity ^0.8.x
-- Foundry
-- [Other dependencies]
+## Implemented Standards
 
-### Architecture
+- ERC-2535 Diamond Standard
+- IERC165 interface support
+- IERC173 ownership interface
+- ERC-20 (via OpenZeppelin interfaces)
 
+## Architecture
+
+```text
+Users / EOAs
+   |
+   | call diamond address
+   v
++---------------------+
+|       Diamond       |
+| (fallback/receive)  |
++----------+----------+
+           |
+           | delegatecall by selector
+           v
++---------------------------+
+|      Facets (modules)     |
+| - DiamondCutFacet         |
+| - DiamondLoupeFacet       |
+| - OwnershipFacet          |
+| - ERC20Facet              |
++---------------------------+
+           |
+           v
++---------------------------+
+| Diamond Storage Libraries |
+| - LibDiamond              |
+| - LibERC20Storage         |
++---------------------------+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Users/EOAs                          │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │                              │
-               │ fund()                       │ withdraw()
-               │                              │ (owner only)
-               ▼                              ▼
-┌──────────────────────────────────────────────────────────────┐
-│                                                              │
-│                      Main Contract                           │
-│                                                              │
-│  ┌────────────────┐        ┌──────────────────┐              │
-│  │   Funders      │        │   Funding Goals  │              │
-│  │   Tracking     │        │   & Amounts      │              │
-│  └────────────────┘        └──────────────────┘              │
-│                                                              │
-└───────────────────┬──────────────────────────────────────────┘
-                    │
-                    │ getConversionRate()
-                    │
-                    ▼
-          ┌─────────────────────┐
-          │  Chainlink Oracle   │
-          │   Price Feed        │
-          └─────────────────────┘
-```
 
-**Repository Structure:**
-```
-project-name/
+### Core Components
+
+- `src/Diamond.sol`
+  - Constructor wires the initial cut facet and interface support
+  - `fallback()` routes calls by selector
+  - `receive()` accepts ETH
+
+- `src/libraries/LibDiamond.sol`
+  - Selector table and facet address bookkeeping
+  - Add/replace/remove logic for `diamondCut`
+  - Ownership enforcement
+  - Init delegatecall handling + revert wrapping
+
+- `src/facets/DiamondCutFacet.sol`
+  - Owner-gated external entrypoint for `diamondCut`
+
+- `src/facets/DiamondLoupeFacet.sol`
+  - Introspection (`facets`, `facetAddresses`, selector lookups)
+
+- `src/facets/OwnershipFacet.sol`
+  - `owner`, `transferOwnership`, `renounceOwnership`
+
+- `src/facets/ERC20Facet.sol`
+  - ERC-20 read/write functions
+  - `mint` (owner), `burn`, `burnFrom`
+
+- `src/upgradeInitializers/DiamondInit.sol`
+  - One-time initialization guard
+  - Sets ERC-20 metadata and optional initial mint
+
+## Repository Structure
+
+```text
+.
 ├── src/
-│   ├── MainContract.sol       # Core contract logic
-│   └── PriceConverter.sol     # Helper library (if applicable)
+│   ├── Diamond.sol
+│   ├── facets/
+│   ├── interfaces/
+│   ├── libraries/
+│   └── upgradeInitializers/
 ├── script/
-│   ├── DeployContract.s.sol   # Deployment script
-│   └── Interactions.s.sol     # Interaction scripts
+│   ├── DeployDiamond.s.sol
+│   └── HelperConfig.s.sol
 ├── test/
 │   ├── unit/
-│   │   └── ContractTest.t.sol
-│   └── integration/
-│       └── InteractionsTest.t.sol
-└── lib/                        # Dependencies
+│   ├── integration/
+│   ├── invariant/
+│   │   ├── Handler.t.sol
+│   │   └── InvariantsTest.t.sol
+│   └── mocks/
+├── foundry.toml
+├── Makefile
+└── README.md
 ```
 
 ## Getting Started
 
 ### Requirements
 
-- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-  - Verify installation: `git --version`
-- [foundry](https://getfoundry.sh/)
-  - Verify installation: `forge --version`
+- `git`
+- `foundry` (`forge`, `cast`, `anvil`)
 
-### Quickstart
+### Install
 
 ```bash
-git clone https://github.com/yourusername/project-name
-cd project-name
-make install
-forge build
+git clone <your-repo-url>
+cd eip2535-diamond
+make
 ```
 
 ### Environment Setup
 
-1. **Copy the environment template:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure your `.env` file:**
-   ```bash
-   SEPOLIA_RPC_URL=your_sepolia_rpc_url_here
-   MAINNET_RPC_URL=your_mainnet_rpc_url_here
-   ETHERSCAN_API_KEY=your_etherscan_api_key_here
-   DEFAULT_KEY_ADDRESS=public_address_of_your_encrypted_private_key_here
-   ```
-
-3. **Get testnet ETH:**
-   - Sepolia Faucet: [cloud.google.com/application/web3/faucet/ethereum/sepolia](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
-
-4. **Configure Makefile**
-- Change account name in Makefile to the name of your desired encrypted key 
-  - change "--account defaultKey" to "--account <YOUR_ENCRYPTED_KEY_NAME>"
-  - check encrypted key names stored locally with:
+Create `.env` from `.env.example` and fill network RPC/API values:
 
 ```bash
-cast wallet list
-```
-- **If no encrypted keys found**
-  - Encrypt private key to be used securely within foundry:
-
-```bash
-cast wallet import <account_name> --interactive
+cp .env.example .env
 ```
 
-**⚠️ Security Warning:**
-- Never commit your `.env` file
-- Never use your mainnet private key for testing
-- Use a separate wallet with only testnet funds
+Important env vars used by scripts:
+
+- `ETH_MAINNET_RPC_URL`
+- `ETH_SEPOLIA_RPC_URL`
+- `ARB_MAINNET_RPC_URL`
+- `ARB_SEPOLIA_RPC_URL`
+- `BASE_MAINNET_RPC_URL`
+- `BASE_SEPOLIA_RPC_URL`
+- `ETHERSCAN_API_KEY`
+- `DEFAULT_KEY_ADDRESS`
+
+`DEFAULT_KEY_ADDRESS` is expected by `HelperConfig` for supported non-local chains.
 
 ## Usage
 
-[Short description of usage if needed]
-
 ### Build
-
-Compile the contracts:
 
 ```bash
 forge build
 ```
 
-### Testing
-
-Run the test suite:
+### Run All Tests
 
 ```bash
 forge test
 ```
 
-Run tests with verbosity:
+### Run Test Slices
 
 ```bash
-forge test -vvv
+forge test --match-path test/unit/*
+forge test --match-path test/integration/*
+forge test --match-path test/invariant/InvariantsTest.t.sol
 ```
 
-Run specific test:
+### Coverage
 
 ```bash
-forge test --match-test testFunctionName
+make coverage
+make coverage-report
 ```
 
-### Test Coverage
-
-Generate coverage report:
+### Additional Make Targets
 
 ```bash
-forge coverage
+make clean
+make update
+make snapshot
+make gas-report
 ```
 
-### Deploy Locally
+## Deployment
 
-Start a local Anvil node:
+### Local (Anvil)
+
+Terminal 1:
 
 ```bash
 make anvil
 ```
 
-Deploy to local node (in another terminal):
+Terminal 2:
 
 ```bash
 make deploy
 ```
 
-### Interact with Contract
+### Testnet / Mainnet
 
-[Examples of how to interact with your contract using cast or scripts]
-
-```bash
-# Example command
-cast send <CONTRACT_ADDRESS> "functionName()" --rpc-url $SEPOLIA_RPC_URL --account defaultKey
-```
-
-## Deployment
-
-### Deploy to Testnet
-
-Deploy to Sepolia:
+Use `make deploy` with network args:
 
 ```bash
-make deploy ARGS="--network sepolia"
+make deploy ARGS="--network eth-sepolia"
+make deploy ARGS="--network eth-MAINNET"
+make deploy ARGS="--network arb-sepolia"
+make deploy ARGS="--network arb-MAINNET"
+make deploy ARGS="--network base-sepolia"
+make deploy ARGS="--network base-MAINNET"
 ```
 
-Or using forge directly:
+`HelperConfig` currently supports:
 
-```bash
-forge script script/DeployContract.s.sol:DeployContract --rpc-url $SEPOLIA_RPC_URL --account defaultKey --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -vvvv
-```
+- Ethereum: Mainnet / Sepolia
+- Arbitrum: Mainnet / Sepolia
+- Base: Mainnet / Sepolia
+- Local Anvil (`chainid 31337`)
 
-### Verify Contract
+If you need to bypass make targets, you can still run `forge script` directly.
 
-If automatic verification fails:
+## Testing Strategy
 
-```bash
-forge verify-contract <CONTRACT_ADDRESS> src/MainContract.sol:MainContract --chain-id 11155111 --etherscan-api-key $ETHERSCAN_API_KEY
-```
+- `test/unit/`
+  - Diamond core behavior, cut edge cases, loupe consistency, ownership
+  - ERC-20 facet logic + fuzz tests
+  - initializer guard/error paths
 
-### Deployment Addresses
+- `test/integration/`
+  - End-to-end deployment flow using the deployment script
+  - Address/code assertions and initial wiring checks
 
-| Network | Contract Address | Explorer                                          |
-| ------- | ---------------- | ------------------------------------------------- |
-| Sepolia | `TBD`            | [View on Etherscan](https://sepolia.etherscan.io) |
-| Mainnet | `TBD`            | [View on Etherscan](https://etherscan.io)         |
+- `test/invariant/`
+  - Handler-driven invariants under `fail_on_revert = true`
+  - `sum(tracked balances) == totalSupply`
+  - loupe table consistency (`facets` / `facetAddresses` / selector mapping)
 
-## Security
+## Security Notes
 
-### Audit Status
+- This code is unaudited.
+- Owner has upgrade authority via `diamondCut` and token mint authority.
+- `renounceOwnership()` is supported and sets owner to `address(0)`.
+- Initializer is one-time guarded (`DiamondInit__AlreadyInitialized`).
+- Upgrade safety and selector bookkeeping are heavily tested, but audits are still required before production use.
 
-⚠️ **This contract has not been audited.** Use at your own risk.
+## References
 
-For production use, consider:
-- Professional security audit
-- Bug bounty program
-- Gradual rollout with monitoring
-
-### Access Control (Roles & Permissions)
-
-[Examples from previous project to be replaced by actual project layout in brackets below. Remove section if no roles or ownership used]
-
-[The protocol implements OpenZeppelin's `AccessControl` and `Ownable` for fine-grained permission management:]
-
-**Roles:** [Remove if roles are not used]
-- [**`MINT_AND_BURN_ROLE`**: Critical role for minting and burning RBT tokens
-  - Granted to `Vault` contract (for deposit/withdrawal operations)
-  - Granted to `RebaseTokenPool` contract (for cross-chain operations)
-  - Only the owner can grant this role]
-
-**Owner Permissions:**  [Remove if owner is not used]
-- [`setInterestRate()`: Decrease the global interest rate (can only decrease, never increase)]
-- [`grantMintAndBurnRole()`: Grant minting/burning permissions to authorized contracts]
-
-**Access Control Vulnerabilities & Mitigations:** 
-- [⚠️ **Risk**: Owner could grant `MINT_AND_BURN_ROLE` to malicious actor
-  - **Mitigation**: Use multi-sig wallet for owner role in production]
-- [⚠️ **Risk**: Owner control of interest rate changes
-  - **Mitigation**: Decentralize rate changes through governance in production]
-
-### Known Limitations
-
-- [Limitation 1 - e.g., centralized owner control]
-- [Limitation 2 - e.g., no withdrawal limits]
-- [Limitation 3 - e.g., relies on external oracle]
-
-**Centralization Risks:**
-- [Explain any admin/owner privileges]
-
-**Oracle Dependencies:**
-- [Explain reliance on Chainlink or other oracles]
-
-## Gas Optimization
-
-| Function    | Gas Cost |
-| ----------- | -------- |
-| `function1` | ~XXX,XXX |
-| `function2` | ~XXX,XXX |
-| `function3` | ~XXX,XXX |
-
-Generate gas report:
-
-```bash
-forge test --gas-report
-```
-
-Generate gas snapshot:
-
-```bash
-forge snapshot
-```
-
-Compare gas changes:
-
-```bash
-forge snapshot --diff
-```
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- EIP-2535: https://eips.ethereum.org/EIPS/eip-2535
+- EIP-20: https://eips.ethereum.org/EIPS/eip-20
+- Nick Mudge diamond reference implementations: https://github.com/mudgen/diamond
+- Project reference list: `DiamondReferenceMaterial.md`
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Disclaimer:** This software is provided "as is", without warranty of any kind. Use at your own risk.
-
-**Built with [Foundry](https://getfoundry.sh/)**
+MIT

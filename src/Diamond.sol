@@ -7,10 +7,18 @@ import {IDiamondLoupe} from "src/interfaces/IDiamondLoupe.sol";
 import {IERC173} from "src/interfaces/IERC173.sol";
 import {LibDiamond} from "src/libraries/LibDiamond.sol";
 
+/// @title ERC-2535 Diamond Proxy
+/// @author 0xGearhart
+/// @notice Routes external function calls to facet contracts using delegatecall.
+/// @dev Keeps callable business/admin logic in facets and limits this contract to proxy plumbing.
 contract Diamond {
     // Keep callable business/admin logic in facets only.
     // This contract should remain proxy plumbing (constructor/fallback/receive),
     // so selector introspection and upgrade history stay facet-centric.
+    /// @notice Deploys the diamond and wires the initial DiamondCut facet selector.
+    /// @dev Registers ERC165, IDiamondCut, IDiamondLoupe, and IERC173 interface support.
+    /// @param _contractOwner Initial contract owner with upgrade authority.
+    /// @param _diamondCutFacet Facet address that implements `diamondCut`.
     constructor(address _contractOwner, address _diamondCutFacet) payable {
         LibDiamond.setContractOwner(_contractOwner);
 
@@ -18,9 +26,7 @@ contract Diamond {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IDiamondCut.diamondCut.selector;
         cut[0] = IDiamondCut.FacetCut({
-            facetAddress: _diamondCutFacet,
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: selectors
+            facetAddress: _diamondCutFacet, action: IDiamondCut.FacetCutAction.Add, functionSelectors: selectors
         });
         LibDiamond.diamondCut(cut, address(0), "");
 
@@ -31,6 +37,8 @@ contract Diamond {
         ds.s_supportedInterfaces[type(IERC173).interfaceId] = true;
     }
 
+    /// @notice Fallback entrypoint that dispatches calls to facets by function selector.
+    /// @dev Reverts if no facet is registered for `msg.sig`.
     fallback() external payable {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         address facet = ds.s_selectorToFacetAndPosition[msg.sig].facetAddress;
@@ -52,5 +60,6 @@ contract Diamond {
         }
     }
 
+    /// @notice Accepts plain ETH transfers to the diamond.
     receive() external payable {}
 }

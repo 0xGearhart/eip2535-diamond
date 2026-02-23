@@ -174,13 +174,13 @@ Important env vars used by scripts:
 ### Build
 
 ```bash
-forge build
+make build
 ```
 
 ### Run All Tests
 
 ```bash
-forge test
+make test
 ```
 
 ### Run Test Slices
@@ -201,8 +201,8 @@ make coverage-report
 ### Additional Make Targets
 
 ```bash
+make reset
 make clean
-make update
 make snapshot
 make gas-report
 ```

@@ -112,25 +112,29 @@ Users / EOAs
 
 ```text
 .
-├── src/
-│   ├── Diamond.sol
-│   ├── facets/
-│   ├── interfaces/
-│   ├── libraries/
-│   └── upgradeInitializers/
-├── script/
-│   ├── DeployDiamond.s.sol
-│   └── HelperConfig.s.sol
-├── test/
-│   ├── unit/
-│   ├── integration/
-│   ├── invariant/
-│   │   ├── Handler.t.sol
-│   │   └── InvariantsTest.t.sol
-│   └── mocks/
-├── foundry.toml
-├── Makefile
-└── README.md
+├── src/                                # Solidity source code
+│   ├── Diamond.sol                     # Diamond proxy (constructor, fallback, receive)
+│   ├── facets/                         # Facet modules (cut/loupe/ownership/ERC20 logic)
+│   ├── interfaces/                     # Protocol interfaces (IDiamondCut, IDiamondLoupe, IERC173)
+│   ├── libraries/                      # Shared storage + diamond internals (LibDiamond, LibERC20Storage)
+│   └── upgradeInitializers/            # Delegatecall initializer contracts (DiamondInit)
+├── script/                             # Foundry scripts for deployment/config
+│   ├── DeployDiamond.s.sol             # Main deployment script (deploy + initial cut + init)
+│   └── HelperConfig.s.sol              # Chain-aware config (owner/account by network)
+├── test/                               # Test suite
+│   ├── unit/                           # Unit tests for isolated behavior
+│   │   ├── DiamondTest.t.sol           # Core diamond behavior, cuts, loupe, ownership, upgrade lifecycle
+│   │   ├── ERC20FacetTest.t.sol        # ERC20 facet deterministic + fuzz behavior through diamond
+│   │   └── DiamondInitTest.t.sol       # Initializer one-time guard and init edge cases
+│   ├── integration/                    # End-to-end deployment and wiring tests
+│   │   └── DeployDiamondTest.t.sol     # Validates deployment script output and deployed state
+│   ├── invariant/                      # Invariant testing (handler-driven)
+│   │   ├── Handler.t.sol               # Stateful fuzz handler actions
+│   │   └── InvariantsTest.t.sol        # Invariant assertions run over handler action sequences
+│   └── mocks/                          # Test-only mock facets/initializers for upgrade scenarios
+├── foundry.toml                        # Foundry config (profiles, fuzz/invariant settings, remappings)
+├── Makefile                            # Shortcut commands for build/test/coverage/deploy
+└── README.md                           # Project documentation
 ```
 
 ## Getting Started
@@ -143,7 +147,7 @@ Users / EOAs
 ### Install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/0xGearhart/eip2535-diamond
 cd eip2535-diamond
 make
 ```

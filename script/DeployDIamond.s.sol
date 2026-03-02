@@ -17,6 +17,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract DeployDiamond is Script, CodeConstants {
+    // Bundles addresses produced by the deployment flow for script logs and tests.
     struct DeployedCore {
         address diamond;
         address cutFacet;
@@ -27,6 +28,7 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function run() external returns (DeployedCore memory deployed) {
+        // Resolve chain-aware deployer account and shared constants from helper config.
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getNetworkConfig();
 
@@ -39,6 +41,7 @@ contract DeployDiamond is Script, CodeConstants {
         console2.log("ERC20 init supply:", INITIAL_SUPPLY);
 
         vm.startBroadcast(config.account);
+        // Execute the full deployment + initial cut in one deterministic path.
         deployed = deployCore(config.account);
         vm.stopBroadcast();
 
@@ -46,14 +49,17 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function deployCore(address owner) internal returns (DeployedCore memory deployed) {
+        // Deploy the immutable bootstrap facet and diamond proxy.
         DiamondCutFacet cutFacet = new DiamondCutFacet();
         Diamond diamond = new Diamond(owner, address(cutFacet));
 
+        // Deploy runtime facets and initializer contract.
         DiamondLoupeFacet loupeFacet = new DiamondLoupeFacet();
         OwnershipFacet ownershipFacet = new OwnershipFacet();
         ERC20Facet erc20Facet = new ERC20Facet();
         DiamondInit diamondInit = new DiamondInit();
 
+        // Build the initial selector cut (loupe + ownership + ERC20).
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](3);
         cut[0] = IDiamondCut.FacetCut({
             facetAddress: address(loupeFacet),
@@ -71,6 +77,7 @@ contract DeployDiamond is Script, CodeConstants {
             functionSelectors: _erc20Selectors()
         });
 
+        // Apply cut and run initializer to set ERC20 metadata + initial supply.
         IDiamondCut(address(diamond)).diamondCut(cut, address(diamondInit), _erc20InitCalldata(owner));
 
         deployed = DeployedCore({
@@ -84,6 +91,7 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function _loupeSelectors() internal pure returns (bytes4[] memory selectors) {
+        // ERC-2535 loupe + ERC-165 introspection selectors.
         selectors = new bytes4[](5);
         selectors[0] = IDiamondLoupe.facets.selector;
         selectors[1] = IDiamondLoupe.facetFunctionSelectors.selector;
@@ -93,6 +101,7 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function _ownershipSelectors() internal pure returns (bytes4[] memory selectors) {
+        // IERC173 ownership selectors plus explicit renounce.
         selectors = new bytes4[](3);
         selectors[0] = IERC173.owner.selector;
         selectors[1] = IERC173.transferOwnership.selector;
@@ -100,6 +109,7 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function _erc20Selectors() internal pure returns (bytes4[] memory selectors) {
+        // ERC20 core + metadata + project-specific mint/burn extensions.
         selectors = new bytes4[](12);
         selectors[0] = IERC20Metadata.name.selector;
         selectors[1] = IERC20Metadata.symbol.selector;
@@ -116,6 +126,7 @@ contract DeployDiamond is Script, CodeConstants {
     }
 
     function _erc20InitCalldata(address owner) internal pure returns (bytes memory) {
+        // Encode initializer args once so script and tests share the same init semantics.
         return abi.encodeWithSelector(DiamondInit.init.selector, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS, owner, INITIAL_SUPPLY);
     }
 
